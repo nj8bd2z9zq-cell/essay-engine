@@ -1,0 +1,21 @@
+{
+  "name": "voluntary-or-violence-engine",
+  "version": "1.0.0",
+  "description": "Adversarial drafting engine for voluntaryist long- and short-form writing. Deterministic linters + API-driven pressure tests. Web app + Claude Code CLI.",
+  "type": "commonjs",
+  "bin": {
+    "vv": "./cli.js"
+  },
+  "scripts": {
+    "lint": "node cli.js lint",
+    "new": "node cli.js new"
+  },
+  "dependencies": {
+    "docx": "^8.5.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "UNLICENSED",
+  "private": true
+}

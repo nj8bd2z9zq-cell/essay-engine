@@ -1,0 +1,699 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Voluntary or Violence — Drafting Engine</title>
+<style>
+  :root{
+    --paper:#f4f1ea; --ink:#1a1a1a; --accent:#8b1a1a; --accent2:#6e1414;
+    --muted:#6b6258; --line:#d8d0c2; --card:#fbf9f4; --ok:#2f6b3a; --warn:#9a5a00;
+    --shadow:0 1px 0 rgba(0,0,0,.04),0 8px 24px rgba(40,30,20,.07);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:var(--paper); color:var(--ink);
+    font:16px/1.55 Georgia,"Times New Roman",serif;
+    -webkit-text-size-adjust:100%;
+    background-image:radial-gradient(rgba(120,90,60,.035) 1px,transparent 1px);
+    background-size:4px 4px;
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  .wrap{max-width:920px;margin:0 auto;padding:0 16px 80px}
+  header.mast{text-align:center;padding:22px 0 12px;border-bottom:3px double var(--accent);margin-bottom:14px;position:relative}
+  .mast .v{font-size:50px;color:var(--accent);line-height:.8;font-weight:bold;letter-spacing:-2px}
+  .mast h1{font-size:22px;letter-spacing:5px;margin:7px 0 2px;text-transform:uppercase}
+  .mast .sub{font-size:12px;letter-spacing:3px;color:var(--muted);text-transform:uppercase}
+  .gear{position:absolute;right:0;top:16px;background:none;border:1px solid var(--line);border-radius:6px;padding:6px 9px;cursor:pointer;font-family:inherit;color:var(--muted)}
+  .projbar{display:flex;gap:6px;align-items:center;margin:0 0 12px;flex-wrap:wrap}
+  .projbar select{flex:1;min-width:140px}
+  .projbar button{padding:8px 10px;font-size:12px}
+  .tabs{display:flex;gap:4px;flex-wrap:wrap;margin:0 0 16px;border-bottom:1px solid var(--line)}
+  .tab{flex:1 1 auto;min-width:78px;text-align:center;padding:10px 4px;cursor:pointer;font-size:12px;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);border:none;border-bottom:3px solid transparent;background:none;font-family:inherit}
+  .tab.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:bold}
+  .tab:disabled{opacity:.4;cursor:not-allowed}
+  .panel{display:none}.panel.active{display:block;animation:fade .25s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin:0 0 16px;box-shadow:var(--shadow)}
+  label{display:block;font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--accent);margin:14px 0 5px;font-weight:bold}
+  label:first-child{margin-top:0}
+  label .hint{color:var(--muted);text-transform:none;letter-spacing:0;font-weight:normal;font-size:12px}
+  input,textarea,select{width:100%;font-family:inherit;font-size:15px;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:7px;padding:10px 11px}
+  textarea{resize:vertical;line-height:1.5}
+  input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(139,26,26,.12)}
+  .req{border-left:3px solid var(--accent)}
+  .row{display:flex;gap:10px;flex-wrap:wrap}.row>*{flex:1 1 180px}
+  button.act,button.ghost{font-family:inherit;font-size:14px;letter-spacing:.5px;cursor:pointer;border-radius:8px;padding:11px 15px}
+  button.act{background:var(--accent);color:#fff;border:none;box-shadow:var(--shadow)}
+  button.act:hover{background:var(--accent2)}
+  button.act:disabled{background:#bcb3a6;cursor:not-allowed;box-shadow:none}
+  button.ghost{background:none;color:var(--accent);border:1px solid var(--accent)}
+  button.ghost:hover{background:rgba(139,26,26,.07)}
+  button.ghost:disabled{opacity:.45;cursor:not-allowed}
+  .btnrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .gate{font-size:13px;color:var(--muted);margin:6px 0 0;font-style:italic}
+  .gate.bad{color:var(--accent)}
+  .out{white-space:pre-wrap;font-size:15px;line-height:1.6;background:#fff;border:1px solid var(--line);border-radius:8px;padding:14px;margin-top:12px;min-height:40px}
+  .out:empty{display:none}
+  .crit{border-left:4px solid var(--accent);background:#fbf6f4}
+  .replybox{display:none;margin-top:10px}
+  .replybox.show{display:block}
+  .verdict{font-size:13px;border-radius:8px;padding:12px 14px;margin-top:12px}
+  .verdict.pass{background:#eef6ef;border:1px solid #cfe3d2;color:var(--ok)}
+  .verdict.fail{background:#fbf2ee;border:1px solid #e7cfc6;color:var(--accent)}
+  .verdict ul{margin:8px 0 0 18px;padding:0}.verdict li{margin:3px 0}
+  .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:8px;margin-top:12px}
+  .metric{background:#fff;border:1px solid var(--line);border-radius:8px;padding:9px 11px}
+  .metric .k{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
+  .metric .val{font-size:19px;font-weight:bold}
+  .metric.bad .val{color:var(--accent)}.metric.good .val{color:var(--ok)}
+  .drawer{position:fixed;inset:0;background:rgba(20,15,10,.45);display:none;z-index:9;align-items:flex-start;justify-content:center}
+  .drawer.open{display:flex}
+  .drawer .inner{background:var(--card);margin-top:7vh;max-width:460px;width:92%;border-radius:12px;padding:20px;box-shadow:var(--shadow);max-height:84vh;overflow:auto}
+  .spin{display:inline-block;width:14px;height:14px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px;margin-right:7px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .small{font-size:12px;color:var(--muted)}
+  .err{color:var(--accent);font-size:13px;margin-top:8px}
+  .stage{font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--warn);margin-top:10px;font-weight:bold}
+  .snaplist{list-style:none;margin:8px 0 0;padding:0}
+  .snaplist li{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px dashed var(--line);font-size:13px}
+  .snaplist button{font-size:11px;padding:4px 8px}
+  @media(max-width:560px){.mast .v{font-size:40px}.mast h1{font-size:17px;letter-spacing:3px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="mast">
+    <div class="v">V</div>
+    <h1>Voluntary or Violence</h1>
+    <div class="sub">Adversarial Drafting Engine · Doctrine 2026-07</div>
+    <button class="gear" id="gearBtn">⚙ API</button>
+  </header>
+
+  <div class="projbar">
+    <select id="projSel"></select>
+    <button class="ghost" id="projNew">+ New</button>
+    <button class="ghost" id="projRen">Rename</button>
+    <button class="ghost" id="projDel">Delete</button>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-p="intake">Intake</button>
+    <button class="tab" data-p="pressure" id="tabPressure">Pressure</button>
+    <button class="tab" data-p="draft" id="tabDraft">Draft</button>
+    <button class="tab" data-p="audit" id="tabAudit">Audits</button>
+    <button class="tab" data-p="export" id="tabExport">Export</button>
+  </div>
+
+  <!-- INTAKE -->
+  <section class="panel active" id="p-intake">
+    <div class="card">
+      <div class="row">
+        <div><label>Voice Profile <span class="hint">— Craft Core never flexes</span></label>
+          <select id="voiceProfile">
+            <option value="polemic">Polemic (default)</option>
+            <option value="analyst">Analyst — zero irony, verdicts &lt;15 words</option>
+            <option value="narrative">Narrative — thesis demonstrated, never stated</option>
+          </select></div>
+        <div id="stanceWrap"><label>Stance</label>
+          <select id="stance">
+            <option value="mock">Mock</option>
+            <option value="dissect">Dissect</option>
+            <option value="narrate">Narrate</option>
+            <option value="instruct">Instruct</option>
+          </select></div>
+        <div id="presetWrap"><label>Preset <span class="hint">— Polemic only</span></label>
+          <select id="voicePreset">
+            <option value="standard">Standard — 60/80</option>
+            <option value="coldFury">Cold Fury — 40/100</option>
+            <option value="highRidicule">High Ridicule — 90/50</option>
+          </select></div>
+      </div>
+      <div class="row">
+        <div><label>Mode</label>
+          <select id="mode">
+            <option value="blog">Blog Article (1,200–2,500)</option>
+            <option value="shortEssay">Short Essay (800–1,500)</option>
+            <option value="longEssay">Long Essay (10,000–12,500 · staged)</option>
+          </select></div>
+        <div><label>Production <span class="hint">— collaborative is doctrine default</span></label>
+          <select id="productionMode">
+            <option value="collaborative">Collaborative (pressure first)</option>
+            <option value="singleShot">Single-shot (angle fully specified)</option>
+          </select></div>
+      </div>
+      <label>Subject</label>
+      <input id="subject" placeholder="e.g. occupational licensing boards in Louisiana">
+      <label>Thesis <span class="hint">— one sentence, yours. The engine will not write this.</span></label>
+      <textarea id="thesis" class="req" rows="2" placeholder="State the claim the piece must prove."></textarea>
+      <p class="gate bad" id="thesisGate"></p>
+      <label>What does reaching the target reader look like?</label>
+      <input id="targetReaderPicture" placeholder="What shifts in the thoughtful statist who reads this?">
+    </div>
+    <div class="card">
+      <label>Named actors <span class="hint">— one per line; checked against the finished draft</span></label>
+      <textarea id="actors" rows="3" placeholder="Lina Khan&#10;The Louisiana Horticulture Commission"></textarea>
+      <label>Dated incidents <span class="hint">— one per line, with dates</span></label>
+      <textarea id="incidents" rows="3"></textarea>
+      <label>Figures / statutory citations <span class="hint">— one per line</span></label>
+      <textarea id="figures" rows="2"></textarea>
+    </div>
+    <div class="card">
+      <label>Opposition's strongest CURRENT argument</label>
+      <textarea id="opposition" rows="2"></textarea>
+      <label>Named defender of that argument</label>
+      <input id="oppositionDefender">
+      <label>Non-voluntaryist sources cited <span class="hint">— one per line</span></label>
+      <textarea id="nonVolSources" rows="2"></textarea>
+      <label>Notes</label>
+      <textarea id="notes" rows="2"></textarea>
+    </div>
+  </section>
+
+  <!-- PRESSURE -->
+  <section class="panel" id="p-pressure">
+    <div class="card">
+      <p class="small">Four adversarial passes against your brief. None touches your thesis. Each output streams live, and you can argue back — the model presses the point or concedes to the better argument, never to discomfort.</p>
+      <div class="btnrow">
+        <button class="act apass" data-pass="intake">Intake Review</button>
+        <button class="act apass" data-pass="steelman">Steelman</button>
+        <button class="act apass" data-pass="reductio">Reductio</button>
+        <button class="act apass" data-pass="bridge">Bridge Inspector</button>
+        <button class="ghost" id="gauntletBtn">Run the Gauntlet (all 4)</button>
+      </div>
+      <div class="out crit" id="critOut"></div>
+      <div class="replybox" id="critReply">
+        <label>Push back <span class="hint">— your rebuttal continues this pass as an argument</span></label>
+        <textarea id="critReplyText" rows="3"></textarea>
+        <div class="btnrow"><button class="act" id="critReplyBtn">Send Rebuttal</button></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DRAFT -->
+  <section class="panel" id="p-draft">
+    <div class="card">
+      <div class="btnrow" style="margin:0 0 8px">
+        <button class="act" id="genDraft">Generate Draft</button>
+        <button class="ghost" id="runLint">Run Linters (offline)</button>
+        <button class="ghost" id="snapBtn">Snapshot</button>
+        <button class="ghost" id="snapsShow">Snapshots…</button>
+      </div>
+      <div class="stage" id="stageMsg"></div>
+      <textarea id="draft" rows="16" placeholder="Draft text. '# ' lines become section titles, '## ' subheads. Long Essay mode drafts in stages: plan → 5 sections → seam report."></textarea>
+      <div id="lintBox"></div>
+    </div>
+  </section>
+
+  <!-- AUDITS -->
+  <section class="panel" id="p-audit">
+    <div class="card">
+      <p class="small">Judgment passes against the current draft. Specificity finds the abstraction; Drift measures wit/venom and adjudicates opening, closing, and title portability; Verification hunts fabrication (T1–T4 tiers, auto-cut T4); Metaphors checks recurrence against your saved history (retire at >40%). Each supports rebuttal rounds except The Auditor, which is detect-only and stateless (P0/P1/P2 severity; it will not rewrite). Delta classifies your revision against the newest snapshot: FIXED / RE-SKINNED / UNTOUCHED.</p>
+      <div class="btnrow">
+        <button class="act apass" data-pass="spec">Specificity</button>
+        <button class="act apass" data-pass="drift">Drift + Structure</button>
+        <button class="act apass" data-pass="verify">Verification</button>
+        <button class="act" id="metaBtn">Metaphors</button>
+        <button class="act apass" data-pass="seams" id="seamsBtn">Seam Report</button>
+        <button class="act apass" data-pass="auditor">The Auditor</button>
+        <button class="act" id="deltaBtn">Delta vs Snapshot</button>
+      </div>
+      <div class="out crit" id="auditOut"></div>
+      <div class="replybox" id="auditReply">
+        <label>Push back</label>
+        <textarea id="auditReplyText" rows="3"></textarea>
+        <div class="btnrow"><button class="act" id="auditReplyBtn">Send Rebuttal</button></div>
+      </div>
+      <div class="btnrow" id="metaSaveRow" style="display:none">
+        <button class="ghost" id="metaSave">Save this output to metaphor history</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- EXPORT -->
+  <section class="panel" id="p-export">
+    <div class="card">
+      <label>Title <span class="hint">— for the .docx masthead</span></label>
+      <input id="docTitle" placeholder="Headline">
+      <div class="btnrow" style="margin-top:14px">
+        <button class="act" id="expDocx">Broadsheet .docx</button>
+        <button class="ghost" id="expHtml">Broadsheet HTML</button>
+        <button class="ghost" id="expChat">Copy Chat-Ready Brief</button>
+        <button class="ghost" id="expJson">Brief JSON ↓</button>
+        <button class="ghost" id="impJson">Brief JSON ↑</button>
+      </div>
+      <input type="file" id="jsonFile" accept="application/json" style="display:none">
+      <div class="out" id="expOut"></div>
+    </div>
+  </section>
+</div>
+
+<!-- SETTINGS -->
+<div class="drawer" id="drawer">
+  <div class="inner">
+    <label>Anthropic API Key <span class="hint">— stored only in this browser</span></label>
+    <input id="apiKey" type="password" placeholder="sk-ant-...">
+    <label>Model</label>
+    <select id="model">
+      <option value="claude-opus-4-8" selected>claude-opus-4-8 (best — default)</option>
+      <option value="claude-opus-4-7">claude-opus-4-7</option>
+      <option value="claude-sonnet-4-6">claude-sonnet-4-6 (faster / cheaper)</option>
+      <option value="claude-haiku-4-5-20251001">claude-haiku-4-5 (cheapest)</option>
+    </select>
+    <div class="btnrow"><button class="act" id="saveKey">Save</button><button class="ghost" id="closeDrawer">Close</button></div>
+    <div class="err" id="keyErr"></div>
+  </div>
+</div>
+
+<!-- SNAPSHOTS -->
+<div class="drawer" id="snapDrawer">
+  <div class="inner">
+    <label>Draft snapshots <span class="hint">— last 8 for this project</span></label>
+    <ul class="snaplist" id="snapList"></ul>
+    <div class="btnrow"><button class="ghost" id="snapClose">Close</button></div>
+  </div>
+</div>
+
+<script src="rules.js"></script>
+<script src="engine.js"></script>
+<script src="docx-export.js"></script>
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  const E = window.VVENGINE, RULES = window.VVRULES;
+  const FIELDS = ["mode","voiceProfile","stance","voicePreset","productionMode","subject","thesis","targetReaderPicture",
+    "actors","incidents","figures","opposition","oppositionDefender","nonVolSources","notes"];
+  const LIST = new Set(["actors","incidents","figures","nonVolSources"]);
+
+  /* ============ projects & storage ============ */
+  function store(){ try{ return JSON.parse(localStorage.getItem("vv_projects")||"null"); }catch(e){ return null; } }
+  function persist(S){ localStorage.setItem("vv_projects", JSON.stringify(S)); }
+  function initStore(){
+    let S = store();
+    if(!S){
+      S = { current:"Untitled", projects:{ "Untitled": blankProject() } };
+      // migrate v1 single-brief data if present
+      try{
+        const old = JSON.parse(localStorage.getItem("vv_brief")||"null");
+        if(old){ S.projects["Untitled"].brief = old; S.projects["Untitled"].draft = old.draft||""; S.projects["Untitled"].docTitle = old.docTitle||""; }
+      }catch(e){}
+      persist(S);
+    }
+    return S;
+  }
+  function blankProject(){ return { brief:{}, draft:"", docTitle:"", snapshots:[] }; }
+  let S = initStore();
+  function proj(){ return S.projects[S.current]; }
+
+  function refreshProjBar(){
+    const sel = $("projSel"); sel.innerHTML = "";
+    Object.keys(S.projects).forEach(n=>{
+      const o = document.createElement("option"); o.value=o.textContent=n;
+      if(n===S.current) o.selected=true; sel.appendChild(o);
+    });
+  }
+  $("projSel").onchange = ()=>{ saveUI(); S.current = $("projSel").value; persist(S); loadUI(); };
+  $("projNew").onclick = ()=>{
+    const n = prompt("Project name:"); if(!n) return;
+    if(S.projects[n]){ alert("Name exists."); return; }
+    saveUI(); S.projects[n]=blankProject(); S.current=n; persist(S); refreshProjBar(); loadUI();
+  };
+  $("projRen").onclick = ()=>{
+    const n = prompt("New name:", S.current); if(!n||n===S.current) return;
+    if(S.projects[n]){ alert("Name exists."); return; }
+    S.projects[n]=S.projects[S.current]; delete S.projects[S.current]; S.current=n; persist(S); refreshProjBar();
+  };
+  $("projDel").onclick = ()=>{
+    if(Object.keys(S.projects).length===1){ alert("Can't delete the only project."); return; }
+    if(!confirm("Delete project \""+S.current+"\" and its snapshots?")) return;
+    delete S.projects[S.current]; S.current=Object.keys(S.projects)[0]; persist(S); refreshProjBar(); loadUI();
+  };
+
+  /* ============ UI <-> project ============ */
+  function loadUI(){
+    const p = proj(), b = p.brief||{};
+    FIELDS.forEach(f=>{ $(f).value = LIST.has(f)&&Array.isArray(b[f]) ? b[f].join("\n") : (b[f]||($(f).tagName==="SELECT"?$(f).value:"")); });
+    if(b.mode) $("mode").value=b.mode;
+    if(b.voicePreset) $("voicePreset").value=b.voicePreset;
+    if(b.voiceProfile) $("voiceProfile").value=b.voiceProfile;
+    if(b.stance) $("stance").value=b.stance;
+    if(b.productionMode) $("productionMode").value=b.productionMode;
+    profileUI();
+    $("draft").value = p.draft||""; $("docTitle").value = p.docTitle||"";
+    $("lintBox").innerHTML=""; $("critOut").textContent=""; $("auditOut").textContent="";
+    hideReply("crit"); hideReply("audit"); gate();
+  }
+  function brief(){
+    const b={};
+    FIELDS.forEach(f=>{
+      const v=$(f).value.trim();
+      b[f]=LIST.has(f)?v.split("\n").map(s=>s.trim()).filter(Boolean):v;
+    });
+    return b;
+  }
+  function saveUI(){
+    const p=proj(); p.brief=brief(); p.draft=$("draft").value; p.docTitle=$("docTitle").value; persist(S);
+  }
+  FIELDS.forEach(f=>$(f).addEventListener("change",saveUI));
+  $("draft").addEventListener("change",saveUI);
+  $("docTitle").addEventListener("change",saveUI);
+
+  /* ============ thesis gate ============ */
+  function gate(){
+    const ok=$("thesis").value.trim().length>0;
+    ["tabPressure","tabDraft","tabAudit"].forEach(id=>$(id).disabled=!ok);
+    $("genDraft").disabled=!ok;
+    $("thesisGate").textContent = ok ? "Thesis set. Pressure, Draft, and Audits unlocked."
+      : "A thesis is required before anything else unlocks.";
+    $("thesisGate").className="gate"+(ok?"":" bad");
+  }
+  $("thesis").addEventListener("input",gate);
+  function profileUI(){
+    const pol = $("voiceProfile").value==="polemic";
+    $("presetWrap").style.display = pol?"":"none";
+    $("stanceWrap").style.display = pol?"":"none";
+  }
+  $("voiceProfile").addEventListener("change",()=>{profileUI();saveUI();});
+
+  /* ============ tabs ============ */
+  document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{
+    if(t.disabled) return;
+    document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+    document.querySelectorAll(".panel").forEach(x=>x.classList.remove("active"));
+    t.classList.add("active"); $("p-"+t.dataset.p).classList.add("active");
+  });
+
+  /* ============ settings ============ */
+  $("gearBtn").onclick=()=>$("drawer").classList.add("open");
+  $("closeDrawer").onclick=()=>$("drawer").classList.remove("open");
+  $("apiKey").value=localStorage.getItem("vv_key")||"";
+  const sm=localStorage.getItem("vv_model"); if(sm) $("model").value=sm;
+  $("saveKey").onclick=()=>{
+    localStorage.setItem("vv_key",$("apiKey").value.trim());
+    localStorage.setItem("vv_model",$("model").value);
+    $("keyErr").textContent="Saved."; setTimeout(()=>{$("keyErr").textContent="";$("drawer").classList.remove("open");},700);
+  };
+
+  /* ============ streaming API ============ */
+  async function streamAPI(prompt, onToken, opts={}){
+    const key=(localStorage.getItem("vv_key")||"").trim();
+    if(!key){ $("drawer").classList.add("open"); throw new Error("Add your API key first."); }
+    const model=localStorage.getItem("vv_model")||"claude-opus-4-8";
+    const res=await fetch("https://api.anthropic.com/v1/messages",{
+      method:"POST",
+      headers:{"content-type":"application/json","x-api-key":key,
+        "anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+      body:JSON.stringify({model,max_tokens:opts.maxTokens||8192,system:prompt.system,
+        messages:opts.messages||[{role:"user",content:prompt.user}],stream:true})
+    });
+    if(!res.ok){ throw new Error("API "+res.status+": "+(await res.text()).slice(0,300)); }
+    const reader=res.body.getReader(), dec=new TextDecoder();
+    let buf="",full="";
+    while(true){
+      const {done,value}=await reader.read(); if(done) break;
+      buf+=dec.decode(value,{stream:true});
+      const lines=buf.split("\n"); buf=lines.pop();
+      for(const line of lines){
+        if(!line.startsWith("data: ")) continue;
+        try{
+          const ev=JSON.parse(line.slice(6));
+          if(ev.type==="content_block_delta"&&ev.delta&&ev.delta.text){ full+=ev.delta.text; onToken(ev.delta.text,full); }
+        }catch(e){}
+      }
+    }
+    return full;
+  }
+  function busy(el,on,label){ if(on){el.dataset.txt=el.textContent;el.innerHTML='<span class="spin"></span>'+(label||"…");el.disabled=true;} else {el.textContent=el.dataset.txt;el.disabled=false;} }
+
+  /* ============ pass sessions (reply rounds) ============ */
+  const sessions = { crit:null, audit:null };
+  function showReply(zone){ $(zone+"Reply").classList.add("show"); }
+  function hideReply(zone){ $(zone+"Reply").classList.remove("show"); sessions[zone]=null; }
+
+  function passPrompt(id){
+    const b=brief(), draft=$("draft").value.trim();
+    switch(id){
+      case "intake":   return E.buildIntakeReview(b);
+      case "steelman": return E.buildSteelman(b);
+      case "reductio": return E.buildReductio(b);
+      case "bridge":   return E.buildBridgeInspector(b);
+      case "spec":     if(!draft) throw new Error("Paste or generate a draft first."); return E.buildSpecificityAudit(draft,b);
+      case "drift":    if(!draft) throw new Error("Paste or generate a draft first."); return E.buildDriftAudit(draft,b);
+      case "verify":   if(!draft) throw new Error("Paste or generate a draft first."); return E.buildVerification(draft);
+      case "seams":    if(!draft) throw new Error("Paste or generate a draft first."); return E.buildIntegration(b,draft);
+      case "auditor":  if(!draft) throw new Error("Paste or generate a draft first."); return E.buildAuditor(draft,b);
+    }
+  }
+  document.querySelectorAll(".apass").forEach(btn=>btn.onclick=async()=>{
+    saveUI();
+    const zone = btn.closest("#p-pressure") ? "crit" : "audit";
+    const out=$(zone+"Out"); out.textContent=""; hideReply(zone); $("metaSaveRow").style.display="none";
+    try{
+      busy(btn,true,"Streaming…");
+      const prompt=passPrompt(btn.dataset.pass);
+      const text=await streamAPI(prompt,(t,full)=>{out.textContent=full;out.scrollTop=out.scrollHeight;});
+      if(btn.dataset.pass==="auditor"){
+        out.textContent+="\n\n— The Auditor is detect-only and stateless: no rebuttal round. Fix, then run Delta. —";
+      } else {
+        sessions[zone]={prompt,exchanges:[{assistant:text}]};
+        if(zone==="crit") pressureRan=true;
+        showReply(zone);
+      }
+    }catch(e){ out.innerHTML='<span class="err">'+e.message+"</span>"; }
+    finally{ busy(btn,false); }
+  });
+
+  async function sendReply(zone){
+    const s=sessions[zone]; if(!s) return;
+    const ta=$(zone+"ReplyText"), rebuttal=ta.value.trim(); if(!rebuttal) return;
+    const out=$(zone+"Out"), btn=$(zone+"ReplyBtn");
+    const prior=out.textContent;
+    try{
+      busy(btn,true,"Arguing…");
+      const msgs=E.continueMessages(s.prompt,s.exchanges,rebuttal);
+      out.textContent=prior+"\n\n────────  YOUR REBUTTAL  ────────\n"+rebuttal+"\n\n────────  RESPONSE  ────────\n";
+      const base=out.textContent;
+      const text=await streamAPI(s.prompt,(t,full)=>{out.textContent=base+full;out.scrollTop=out.scrollHeight;},{messages:msgs});
+      s.exchanges[s.exchanges.length-1].user=rebuttal;
+      s.exchanges.push({assistant:text});
+      ta.value="";
+    }catch(e){ out.textContent=prior; alert(e.message); }
+    finally{ busy(btn,false); }
+  }
+  $("critReplyBtn").onclick=()=>sendReply("crit");
+  $("auditReplyBtn").onclick=()=>sendReply("audit");
+
+  /* ============ gauntlet ============ */
+  $("gauntletBtn").onclick=async()=>{
+    saveUI(); const out=$("critOut"); out.textContent=""; hideReply("crit");
+    const btn=$("gauntletBtn");
+    const seq=[["INTAKE REVIEW","intake"],["STEELMAN","steelman"],["REDUCTIO","reductio"],["BRIDGE INSPECTOR","bridge"]];
+    try{
+      busy(btn,true,"Gauntlet…");
+      for(const [name,id] of seq){
+        out.textContent+= (out.textContent?"\n\n":"")+"════════  "+name+"  ════════\n\n";
+        const base=out.textContent;
+        await streamAPI(passPrompt(id),(t,full)=>{out.textContent=base+full;out.scrollTop=out.scrollHeight;});
+      }
+      out.textContent+="\n\n— Gauntlet complete. Run a single pass to argue with it. —";
+    }catch(e){ out.textContent+="\n\n"+e.message; }
+    finally{ busy(btn,false); }
+  };
+
+  /* ============ drafting (single-shot or staged) ============ */
+  function snapshot(label){
+    const p=proj();
+    if(!$("draft").value.trim()) return;
+    p.snapshots.unshift({t:Date.now(),label:label||"manual",text:$("draft").value});
+    p.snapshots=p.snapshots.slice(0,8); persist(S);
+  }
+  $("snapBtn").onclick=()=>{ snapshot("manual"); alert("Snapshot saved."); };
+
+  let pressureRan=false;
+  $("genDraft").onclick=async()=>{
+    saveUI(); const btn=$("genDraft"), stage=$("stageMsg"), ta=$("draft");
+    const b=brief();
+    if(b.productionMode!=="singleShot" && !pressureRan){
+      if(!confirm("Collaborative production is the default: run the pressure passes before drafting. Generate anyway?")) return;
+    }
+    if(ta.value.trim()) snapshot("before-generate");
+    try{
+      busy(btn,true,"Drafting…");
+      if(b.mode==="longEssay"){
+        const mRules=RULES.modes.longEssay;
+        stage.textContent="Stage A — structure plan…";
+        const plan=await streamAPI(E.buildStructure(b),(t,full)=>{ta.value="── STRUCTURE PLAN (will be replaced by prose) ──\n\n"+full;},{maxTokens:4096});
+        let full="";
+        for(let s=1;s<=mRules.sections;s++){
+          stage.textContent="Section "+s+" of "+mRules.sections+"…";
+          const ps=full.split(/\n\s*\n/).filter(p=>p&&!/^#/.test(p));
+          const tail=ps.slice(-2).join("\n\n")||null;
+          const sec=await streamAPI(E.buildSectionDraft(b,plan,s,tail),
+            (t,acc)=>{ta.value=full+(full?"\n\n":"")+acc;ta.scrollTop=ta.scrollHeight;},{maxTokens:8192});
+          full+=(full?"\n\n":"")+sec.trim();
+          ta.value=full; saveUI(); snapshot("section-"+s);
+        }
+        stage.textContent="Stage E — seam report…";
+        const seams=await streamAPI(E.buildIntegration(b,full),(t,acc)=>{$("auditOut").textContent=acc;},{maxTokens:4096});
+        $("auditOut").textContent=seams;
+        stage.textContent="Staged draft complete — seam report is in the Audits tab.";
+      } else {
+        const text=await streamAPI(E.buildDraft(b),(t,full)=>{ta.value=full;ta.scrollTop=ta.scrollHeight;});
+        ta.value=text;
+      }
+      saveUI(); renderLint();
+    }catch(e){ stage.textContent=""; alert(e.message); }
+    finally{ busy(btn,false); if(b.mode!=="longEssay") stage.textContent=""; }
+  };
+
+  /* ============ snapshots drawer ============ */
+  $("snapsShow").onclick=()=>{
+    const ul=$("snapList"); ul.innerHTML="";
+    const snaps=proj().snapshots||[];
+    if(!snaps.length) ul.innerHTML="<li class='small'>No snapshots yet.</li>";
+    snaps.forEach((s,i)=>{
+      const li=document.createElement("li");
+      const d=new Date(s.t);
+      li.innerHTML="<span>"+s.label+" · "+d.toLocaleString()+" · "+E.wordCount(s.text)+"w</span>";
+      const btn=document.createElement("button"); btn.className="ghost"; btn.textContent="Restore";
+      btn.onclick=()=>{ snapshot("before-restore"); $("draft").value=s.text; saveUI(); $("snapDrawer").classList.remove("open"); renderLint(); };
+      li.appendChild(btn); ul.appendChild(li);
+    });
+    $("snapDrawer").classList.add("open");
+  };
+  $("snapClose").onclick=()=>$("snapDrawer").classList.remove("open");
+
+  /* ============ linters ============ */
+  function renderLint(){
+    const text=$("draft").value.trim(), box=$("lintBox");
+    if(!text){ box.innerHTML=""; return; }
+    const b=brief();
+    const L=E.runLinters(text,b), V=E.lintVerdict(L,b.mode||"blog"), c=RULES.constraints, sp=L.specificity;
+    const m=(k,val,bad,good)=>`<div class="metric ${bad?'bad':(good?'good':'')}"><div class="k">${k}</div><div class="val">${val}</div></div>`;
+    let html='<div class="metrics">'
+      + m("Words",E.wordCount(text))
+      + m("Passive",L.passive.pct+"%",L.passive.pct>c.maxPassivePct,L.passive.pct<=c.maxPassivePct)
+      + m("Avg sent.",L.rhythm.avg+"w",!L.rhythm.avgInBand,L.rhythm.avgInBand)
+      + m("Length σ",L.rhythm.sd,!L.rhythm.sdOk,L.rhythm.sdOk)
+      + m("Transitions",L.transitions.pct+"%",!L.transitions.ok,L.transitions.ok)
+      + m("Em-dash/1k",L.emDash.per1k,L.emDash.heavy)
+      + m("Dated",sp.datedIncidents+"/"+sp.need.datedIncidents,sp.datedIncidents<sp.need.datedIncidents)
+      + m("Figures",sp.figuresOrCitations+"/"+sp.need.figuresOrCitations,sp.figuresOrCitations<sp.need.figuresOrCitations)
+      + '</div>';
+    if(b.mode==="longEssay"&&L.sections.length){
+      const mr=RULES.modes.longEssay;
+      html+='<div class="metrics">'+L.sections.map((s,i)=>{
+        const ok=s.words>=mr.sectionMinWords&&s.words<=mr.sectionMaxWords;
+        return m("§"+(i+1)+" "+s.title.slice(0,12),s.words+"w",!ok,ok);
+      }).join("")+'</div>';
+    }
+    html+='<div class="verdict '+(V.pass?'pass':'fail')+'">'
+      + (V.pass?"All deterministic checks clear. Run the judgment audits next."
+              :"<strong>Flags:</strong><ul>"+V.fails.map(f=>"<li>"+f+"</li>").join("")+"</ul>");
+    if(L.actors.length){
+      html+='<div style="margin-top:8px"><strong>Brief actors:</strong> '
+        +L.actors.map(a=>(a.present?"✓ ":"✗ MISSING ")+a.actor).join(" · ")+"</div>";
+    }
+    if(L.verifySignals.length){
+      html+='<div style="margin-top:6px"><strong>Fabrication tells:</strong> '
+        +L.verifySignals.map(v=>v.signal+" ×"+v.count).join(", ")+" — run the Verification audit.</div>";
+    }
+    html+='</div>';
+    box.innerHTML=html;
+  }
+  $("runLint").onclick=renderLint;
+
+  /* ============ metaphors ============ */
+  let lastMetaphors=null;
+  $("metaBtn").onclick=async()=>{
+    const text=$("draft").value.trim(), out=$("auditOut"), btn=$("metaBtn");
+    if(!text){ out.innerHTML='<span class="err">Paste or generate a draft first.</span>'; return; }
+    hideReply("audit");
+    try{
+      busy(btn,true,"Extracting…");
+      const raw=await streamAPI(E.buildMetaphorExtract(text),()=>{},{maxTokens:2048});
+      const list=JSON.parse(raw.replace(/```json|```/g,"").trim());
+      const history=JSON.parse(localStorage.getItem("vv_metaphors")||"[]");
+      const rec=E.metaphorRecurrence(list,history);
+      out.textContent="METAPHOR RECURRENCE  (vs last "+Math.min(history.length,10)+" saved outputs; retire at >40%)\n\n"
+        +rec.map(r=>(r.retire?"RETIRE  ":"fresh   ")+r.metaphor+"  — "+r.recurrencePct+"%").join("\n");
+      lastMetaphors=list;
+      $("metaSaveRow").style.display="flex";
+    }catch(e){ out.innerHTML='<span class="err">'+e.message+"</span>"; }
+    finally{ busy(btn,false); }
+  };
+  $("deltaBtn").onclick=async()=>{
+    const out=$("auditOut"), btn=$("deltaBtn"), cur=$("draft").value.trim();
+    const snaps=proj().snapshots||[];
+    if(!cur){ out.innerHTML='<span class="err">No current draft.</span>'; return; }
+    if(!snaps.length){ out.innerHTML='<span class="err">No snapshot to compare against — take one before revising.</span>'; return; }
+    hideReply("audit"); out.textContent="";
+    try{
+      busy(btn,true,"Comparing…");
+      const prompt=E.buildDelta(snaps[0].text,cur,null);
+      await streamAPI(prompt,(t,full)=>{out.textContent=full;out.scrollTop=out.scrollHeight;});
+      out.textContent+="\n\n— Compared against snapshot: "+snaps[0].label+" ("+new Date(snaps[0].t).toLocaleString()+") —";
+    }catch(e){ out.innerHTML='<span class="err">'+e.message+"</span>"; }
+    finally{ busy(btn,false); }
+  };
+  $("metaSave").onclick=()=>{
+    if(!lastMetaphors) return;
+    const h=JSON.parse(localStorage.getItem("vv_metaphors")||"[]");
+    h.push(lastMetaphors);
+    localStorage.setItem("vv_metaphors",JSON.stringify(h.slice(-20)));
+    $("metaSaveRow").style.display="none";
+    $("auditOut").textContent+="\n\nSaved to history ("+Math.min(h.length,20)+" outputs tracked).";
+  };
+
+  /* ============ exports ============ */
+  $("expChat").onclick=()=>{
+    const txt="I'm drafting in my established voice. Here is the intake brief. Do NOT propose or rewrite my thesis — attack it, find missing named actors/incidents/figures, steelman the opposition, and run the reductio. Then we'll draft together.\n\n"+E.briefToText(brief());
+    navigator.clipboard.writeText(txt).then(()=>{$("expOut").textContent="Chat-ready brief copied.";},()=>{$("expOut").textContent=txt;});
+  };
+  function dl(name,blob){ const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000); }
+  $("expJson").onclick=()=>{ saveUI(); const p=proj(); dl((S.current.replace(/\W+/g,"-")||"brief")+".json",new Blob([JSON.stringify({...p.brief,draft:p.draft,docTitle:p.docTitle},null,2)],{type:"application/json"})); $("expOut").textContent="Brief JSON downloaded."; };
+  $("impJson").onclick=()=>$("jsonFile").click();
+  $("jsonFile").onchange=e=>{
+    const f=e.target.files[0]; if(!f) return; const r=new FileReader();
+    r.onload=()=>{ try{
+      const b=JSON.parse(r.result); const p=proj();
+      p.brief=b; p.draft=b.draft||""; p.docTitle=b.docTitle||""; persist(S); loadUI();
+      $("expOut").textContent="Brief loaded into project \""+S.current+"\".";
+    }catch(err){ $("expOut").textContent="Bad JSON."; } };
+    r.readAsText(f);
+  };
+  function broadsheetHTML(){
+    const title=$("docTitle").value||"Untitled";
+    const blocks=($("draft").value||"").split(/\n\s*\n/).map(x=>x.trim()).filter(Boolean).map(bl=>{
+      if(/^#\s/.test(bl)) return '<h1>'+bl.replace(/^#\s+/,"")+'</h1>';
+      if(/^##\s/.test(bl)) return '<h2>'+bl.replace(/^##\s+/,"")+'</h2>';
+      return '<p>'+bl.replace(/\n/g," ")+'</p>';
+    }).join("\n");
+    return '<!doctype html><meta charset="utf-8"><title>'+title+'</title><style>'
+      +'body{font:13pt/1.6 Georgia,serif;color:#1a1a1a;max-width:6.5in;margin:1in auto;padding:0 .3in}'
+      +'h1.mast{text-align:center;color:#8b1a1a;letter-spacing:2px;border-bottom:3px double #8b1a1a;padding-bottom:8px;font-size:24pt}'
+      +'h1{color:#8b1a1a;font-size:16pt;margin-top:1.4em}h2{color:#333;font-style:italic;font-size:13pt}'
+      +'p{text-align:justify;margin:0 0 .8em}@media print{body{margin:.9in}}</style>'
+      +'<h1 class="mast">'+title.toUpperCase()+'</h1>\n'+blocks;
+  }
+  $("expHtml").onclick=()=>{ dl((($("docTitle").value||"draft").replace(/\W+/g,"-"))+".html",new Blob([broadsheetHTML()],{type:"text/html"})); $("expOut").textContent="Broadsheet HTML downloaded — opens in Pages."; };
+  $("expDocx").onclick=async()=>{
+    const out=$("expOut"); out.textContent="Building .docx…";
+    try{
+      if(!window.docx){
+        await new Promise((res,rej)=>{const s=document.createElement("script");
+          s.src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.js";s.onload=res;s.onerror=rej;document.head.appendChild(s);});
+      }
+      const doc=window.VVDOCX.build(window.docx,{title:$("docTitle").value||"Untitled",byline:"Voluntary or Violence",body:$("draft").value||""});
+      const blob=await window.docx.Packer.toBlob(doc);
+      dl((($("docTitle").value||"draft").replace(/\W+/g,"-"))+".docx",blob);
+      out.textContent=".docx downloaded.";
+    }catch(e){ out.innerHTML='<span class="err">Couldn\'t load the .docx library (offline?). Use the Broadsheet HTML export — it opens in Pages.</span>'; }
+  };
+
+  refreshProjBar(); loadUI();
+})();
+</script>
+</body>
+</html>
